@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: DMPy
+Version: 0.0.1
+Summary: Simple Python API for controlling the Thorlabs DMP40 deformable mirror
+Home-page: https://github.com/baf57/DMPy.git
+Author: Brayden Freitas
+Author-email: andrewbrayden98@gmail.com

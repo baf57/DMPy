@@ -13,8 +13,8 @@ class DeformableMirror:
     initd = False
     segmentCount = c.c_uint32()
     mirrorPattern = (c.c_double*(segmentCount.value))()
-    flagDict = dict([2**x for x in range(12)],
-                    ["Ast45", "Def", "Ast0", "TreY", "ComX", "ComY", "TreX", "TetY", "SAstY", "SAb3", "SAstX", "TetX"])
+    flagDict = dict(zip([2**x for x in range(12)],
+                    ["Ast45", "Def", "Ast0", "TreY", "ComX", "ComY", "TreX", "TetY", "SAstY", "SAb3", "SAstX", "TetX"]))
 
     def __init__(self):
         # load libraries
@@ -60,6 +60,7 @@ class DeformableMirror:
         # Determine how many segments the mirror has and how many tilt arms.
         self.segmentCount = c.c_uint32()
         self.lib.TLDFM_get_segment_count(self.instrumentHandle, c.byref(self.segmentCount))
+        self.mirrorPattern = (c.c_double*(self.segmentCount.value))()
         tiltCount = c.c_uint32()
         self.lib.TLDFM_get_tilt_count(self.instrumentHandle, c.byref(tiltCount))
         # Create arrays for the mirror segment and tilt arm patterns
@@ -70,8 +71,7 @@ class DeformableMirror:
         counter = 1
 
         # First relax step.
-        print("Relaxing the DMP40.")
-        print()
+        print("Relaxing the DMP40")
         self.libX.TLDFMX_relax(self.instrumentHandle, part, isFirstStep, reload,
                     relaxPatternMirror, relaxPatternArms, c.byref(remainingSteps))
 
@@ -87,9 +87,9 @@ class DeformableMirror:
                     relaxPatternMirror, relaxPatternArms, c.byref(remainingSteps))
             self.lib.TLDFM_set_segment_voltages(self.instrumentHandle, relaxPatternMirror)
             self.lib.TLDFM_set_tilt_voltages(self.instrumentHandle, relaxPatternArms)
-        print("Relaxing completed")
+        print("Relaxing completed\n")
 
-    def setSingleZernikeStrength(self, zernikeBitfield:c.c_uint32, amplitude:c.c_double):
+    def setSingleZernikeStrength(self, zernikeBitfield:c.c_uint32, amplitude:c.c_double, verbose=False):
         # the zernike bitfields are as follows:
         #     Z_Ast45_Flag = 0x00000001, // Z4   
         #     Z_Def_Flag   = 0x00000002, // Z5   
@@ -110,7 +110,7 @@ class DeformableMirror:
             print("Device must first be initialized")
             return
         
-        # check amplitude range
+        # check amplitude rangeDeformable Mirror
         if not(amplitude.value>=-1.0 and amplitude.value<=1.0):
             print("Amplitude must be in the range [-1.0,1.0]")
             return
@@ -123,7 +123,10 @@ class DeformableMirror:
         self.lib.TLDFM_set_segment_voltages(self.instrumentHandle, 
                                                                 self.mirrorPattern)
         
-    def setZernikeStrength(self, zernikeBitfield:c.c_uint32, amplitudes:list[c.c_double]):
+        if verbose: 
+            self.getState()
+        
+    def setZernikeStrength(self, zernikeBitfield:c.c_uint32, amplitudes:list[c.c_double], verbose=False):
         # set multiple zernike polynomials at once. The list of amplitudes will
         # always have a size of 12, and the amplitudes go in order of the bitfields:
         #     Z_Ast45_Flag = 0x00000001, // Z4   
@@ -154,6 +157,9 @@ class DeformableMirror:
         if min(amplitudes) < -1.0 or max(amplitudes) > 1.0:
             print("Amplitudes must be in the range [-1.0,1.0]")
             return
+
+        print(f"Setting the following amplitudes (in order):")
+        print(f'{[amplitudes[x] for x in range(12)]}')
         
         # calculate the zernike pattern and then set the voltages
         self.libX.TLDFMX_calculate_zernike_pattern(self.instrumentHandle, 
@@ -161,6 +167,9 @@ class DeformableMirror:
         self.lib.TLDFM_set_segment_voltages(self.instrumentHandle, 
                                                                 self.mirrorPattern)
         
+        if verbose:
+            self.getState()
+
     def getState(self):
         # prints the current voltage on all segments for debugging purposes
 
